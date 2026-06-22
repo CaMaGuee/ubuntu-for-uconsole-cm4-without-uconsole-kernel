@@ -1,8 +1,10 @@
 # ubuntu-for-uconsole-cm4-without-uconsole-kernel
 A summary of the custom Ubuntu 22.04.4 Linux setup for uConsole CM4, including the Raspberry Pi rpi-6.12.y kernel, hardware support, boot configuration, and RTL8851BU Wi‑Fi setup
 
+## 1. [한국어 버전](#uConsole-CM4-커스텀-Ubuntu-Linux)
+## 2. [English.ver](##-uConsole-CM4-Custom-Ubuntu-Linux)
 
-# uConsole CM4 커스텀 Ubuntu Linux [ Kor ]
+# uConsole CM4 커스텀 Ubuntu Linux
 
 ## 프로젝트 소개
 
@@ -167,3 +169,175 @@ OS 이미지 파일 자체는 포함하지 않고, 대신 어떤 작업이 적�
 
 이 저장소의 내용은 MIT License 하에 제공합니다.
 외부 프로젝트와 구성 요소의 소스 코드 및 저작물은 각 프로젝트의 원래 라이선스를 따릅니다.
+
+
+
+<hr/>
+
+
+
+# uConsole CM4 Custom Ubuntu Linux
+
+## Project Overview
+
+This repository documents the actual configuration work applied to build a custom Ubuntu 22.04.4–based Linux environment for the uConsole CM4.
+
+The repository does not distribute any OS image files.  
+Instead, it provides a concise overview of the build approach, kernel configuration, hardware enablement, boot configuration, and Wi‑Fi setup required to reproduce the environment.
+
+The goals are:
+
+- Use Ubuntu 22.04.4 Raspberry Pi Desktop (arm64) as the base system.
+- Apply a custom kernel based on the Raspberry Pi `rpi-6.12.y` branch.
+- Enable the panel, backlight, PMU, and overlay configuration required for uConsole CM4.
+- Document a working Wi‑Fi environment for the Realtek USB device `0bda:b831`.
+- Record structure and changes clearly so the same setup can be recreated later.
+
+## Base Setup
+
+This environment is based on the Ubuntu 22.04.4 preinstalled desktop image for Raspberry Pi (arm64).
+
+Key base conditions are:
+
+- Base OS: Ubuntu 22.04.4 Raspberry Pi Desktop (arm64).
+- Boot layout: `/boot/firmware`–based boot structure.
+- Kernel base: Raspberry Pi `rpi-6.12.y` branch.
+- Local version string: `-camaguee-uconsole-6.12`.
+
+## Summary of Applied Work
+
+### 1. Build Environment Preparation
+
+The configuration assumes starting from a fresh VM or build host.
+
+- Use an x86_64 Debian environment as the build host.
+- Install arm64 cross‑compilation toolchains and multi‑arch libraries.
+- Install packages required for kernel builds, chroot operations, and initramfs generation.
+
+### 2. Preparing the Ubuntu Raspberry Pi Image
+
+The Ubuntu Raspberry Pi image is downloaded and attached as a loop device, then the root filesystem and `/boot/firmware` are mounted separately.
+
+- Mount the root filesystem.
+- Mount the `/boot/firmware` boot partition.
+- Extract the default Ubuntu raspi kernel config and use it as the starting point for the custom kernel `.config`.
+
+### 3. Kernel Source Preparation
+
+The kernel is based on the Raspberry Pi `linux` repository, `rpi-6.12.y` branch.
+
+- Generate `.config` from the default Ubuntu raspi config.
+- Clear `CONFIG_SYSTEM_TRUSTED_KEYS` and `CONFIG_SYSTEM_REVOCATION_KEYS` to reduce build issues.
+- Set `localversion` to `-camaguee-uconsole-6.12` to pin the resulting kernel version string.
+
+### 4. uConsole Hardware Enablement
+
+Kernel support required for uConsole CM4 hardware is integrated into the build.
+
+Key items applied:
+
+- Add CWU50 panel driver support.
+- Add OCP8178 backlight driver support.
+- Integrate AXP20x PMU and battery‑related drivers.
+- Add uConsole/DevTerm–series overlay definitions.
+- Support a custom battery overlay for configurable battery parameters.
+
+### 5. Kernel Build and Installation into rootfs
+
+The kernel is built using the `bindeb-pkg` workflow to generate arm64 `.deb` packages.
+
+- Build `linux-image`, `linux-headers`, and `linux-libc-dev` packages.
+- Enter the Ubuntu rootfs via chroot and install the packages.
+- Generate an initramfs for the target kernel version.
+- Copy the resulting `vmlinuz` and `initrd.img` into `/boot/firmware`.
+
+### 6. `/boot/firmware` Boot Configuration
+
+The boot configuration is aligned with the Ubuntu for Raspberry Pi layout, using `/boot/firmware` as the boot partition.
+
+Main changes include:
+
+- Fix kernel and initramfs names in `config.txt` to point to the new kernel version.
+- Apply `ignore_lcd=1`, `display_auto_detect=0`, and `camera_auto_detect=0`.
+- Enable `dtoverlay=vc4-kms-v3d` and CM4‑specific KMS settings.
+- Use overlays such as `clockworkpi-uconsole`, `devterm-pmu`, `devterm-panel-uc`, `devterm-misc`, and `audremap`.
+- Configure required boot parameters including `gpu_mem=64`, `spi`, `i2c_arm`, and `audio`.
+- Place the necessary `.dtbo` files under `/boot/firmware/overlays`.
+
+### 7. Initial Boot Verification
+
+After the first boot, the following items are used as verification checkpoints:
+
+- Confirm the intended kernel version with `uname -r`.
+- Check that panel and backlight modules are loaded correctly.
+- Verify battery and power‑related sysfs entries.
+- Confirm that the required overlay files exist.
+- Ensure the LCD panel displays correctly and that console or GUI sessions are accessible.
+
+### 8. Wi‑Fi Configuration
+
+Wi‑Fi configuration targets the Realtek USB device `0bda:b831` (RTL8851BU/RTL8831BU family).
+
+The approach is:
+
+- Use a Git‑based driver derived from `morrownr/rtw89`.
+- Install build dependencies inside the uConsole environment, then build and install the driver.
+- Load `rtw89_core_git`, `rtw89_usb_git`, and `rtw89_8851bu_git` modules.
+- Verify wireless connectivity using `nmcli` as the primary interface.
+
+## Resulting Target State
+
+The desired final state is:
+
+- `uname -r` reports `6.12.93-camaguee-uconsole-6.12+` (or a very similar string).
+- The LCD panel operates correctly.
+- `panel_cwu50` and `ocp8178_bl` modules are loaded without issues.
+- `axp20x-battery` sysfs entries expose valid values.
+- All required overlay files exist under `/boot/firmware/overlays`.
+- The Realtek USB device `0bda:b831` is detected.
+- The `rtw89` Git‑based modules are loaded and Wi‑Fi connectivity is available.
+
+## What This Repository Does Not Include
+
+This repository does not directly include:
+
+- A complete Ubuntu OS image file.
+- A ready‑to‑flash microSD image.
+- Full source mirrors of external projects.
+
+The repository focuses on summarizing the applied changes and configuration approach, not on distributing binaries.
+
+## Components Referenced
+
+This project is built around the following components and upstream projects:
+
+- Raspberry Pi Linux kernel (`rpi-6.12.y` series).
+- ClockworkPi uConsole/DevTerm kernel patches and overlay configuration.
+- Realtek Wi‑Fi drivers based on `morrownr/rtw89`.
+- Ubuntu for Raspberry Pi image layout and tooling.
+
+## References
+
+- Raspberry Pi Linux  
+- ClockworkPi kernel / overlays  
+- morrownr/rtw89  
+- Ubuntu for Raspberry Pi  
+
+## Summary
+
+This README provides a summarized view of the changes applied to create a custom Ubuntu Linux environment for the uConsole CM4.
+
+The core idea is to base the system on Ubuntu 22.04.4 Raspberry Pi Desktop, apply the Raspberry Pi `rpi-6.12.y` kernel with uConsole‑specific hardware enablement, and integrate Wi‑Fi support to achieve a fully usable configuration.[web:69][web:77]
+
+In the original uConsole environment, relying on the vendor’s package repository and uConsole‑specific kernel introduced several issues: running `make` and other build tools was fragile, and kernel or package updates frequently caused dependency instability. This work instead treats the uConsole as a **development board** that shares the same hardware, and focuses only on the configuration required to make that hardware work on top of a more standard Ubuntu and Raspberry Pi kernel stack.[web:69][web:1]
+
+Based on this setup, it should be straightforward to adapt the same ideas to newer Raspberry Pi kernels or other recent Debian‑family distributions with minimal changes.
+
+The OS image itself is not included.  
+Instead, the repository documents which changes were applied and which components were used, so that the environment remains auditable and reproducible.
+
+## License
+
+The contents of this repository are provided under the MIT License.
+
+Source code and artifacts from external projects and components are governed by the original licenses of those respective projects.
