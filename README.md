@@ -2,7 +2,7 @@
 A summary of the custom Ubuntu 22.04.4 Linux setup for uConsole CM4, including the Raspberry Pi rpi-6.12.y kernel, hardware support, boot configuration, and RTL8851BU Wi‑Fi setup
 
 ## 1. [한국어 버전](#uConsole-CM4-커스텀-Ubuntu-Linux)
-## 2. [English.ver](##-uConsole-CM4-Custom-Ubuntu-Linux)
+## 2. [English.ver](#uConsole-CM4-Custom-Ubuntu-Linux)
 
 # uConsole CM4 커스텀 Ubuntu Linux
 
